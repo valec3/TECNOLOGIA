@@ -64,7 +64,20 @@ class PlanoVialApp:
     def renderizar(self):
         self.canvas.delete("all")
         
-        # Avenidas Horizontales
+        # 1. Dibujar Casas Residenciales (en el fondo)
+        for casa in self.catastro.casas:
+            self.canvas.create_rectangle(
+                casa["x"], casa["y"], 
+                casa["x"] + casa["w"], casa["y"] + casa["h"], 
+                fill="#16161a", outline="#25252d", width=1
+            )
+            self.canvas.create_rectangle(
+                casa["x"] + 4, casa["y"] + 4,
+                casa["x"] + casa["w"] - 4, casa["y"] + casa["h"] - 4,
+                outline=casa["color_luz"], width=1, dash=(2, 4)
+            )
+        
+        # 2. Avenidas Horizontales
         for y in self.catastro.avenidas_horizontales:
             self.canvas.create_rectangle(0, y - 40, self.catastro.width, y + 40, fill="#1e1e24", outline="")
             self.canvas.create_line(0, y, self.catastro.width, y, fill="#ffcc00", width=2, dash=(12, 8))
@@ -75,7 +88,7 @@ class PlanoVialApp:
             for x in [100, 380, 680]:
                 self.canvas.create_text(x, y + 20, text="→", fill="#55555f", font=("Arial", 12, "bold"))
             
-        # Avenidas Verticales
+        # 3. Avenidas Verticales
         for x in self.catastro.avenidas_verticales:
             self.canvas.create_rectangle(x - 40, 0, x + 40, self.catastro.height, fill="#1e1e24", outline="")
             self.canvas.create_line(x, 0, x, self.catastro.height, fill="#ffcc00", width=2, dash=(12, 8))
@@ -86,21 +99,21 @@ class PlanoVialApp:
             for y in [100, 380, 680]:
                 self.canvas.create_text(x + 20, y, text="↓", fill="#55555f", font=("Arial", 12, "bold"))
 
-        # Intersecciones (Nodos)
+        # 4. Intersecciones (Nodos)
         for nodo in self.catastro.intersecciones:
             ix, iy = nodo["pos"]
             self.canvas.create_rectangle(ix - 40, iy - 40, ix + 40, iy + 40, fill="#25252d", outline="")
             self.canvas.create_rectangle(ix - 40, iy - 40, ix + 40, iy + 40, outline="#00f0ff", width=1, dash=(2, 4))
             self.canvas.create_text(ix, iy, text=nodo["nombre"], fill="#00f0ff", font=("Courier New", 8, "bold"), justify="center")
 
-        # Semáforos
+        # 5. Semáforos
         for sem in self.semaforos:
             color_hex = "#ff0055" if sem.estado == "ROJO" else ("#ffcc00" if sem.estado == "AMARILLO" else "#39ff14")
             self.canvas.create_oval(sem.x - 9, sem.y - 9, sem.x + 9, sem.y + 9, fill="#121214", outline="#33333b", width=2)
             self.canvas.create_oval(sem.x - 7, sem.y - 7, sem.x + 7, sem.y + 7, outline=color_hex, width=1)
             self.canvas.create_oval(sem.x - 5, sem.y - 5, sem.x + 5, sem.y + 5, fill=color_hex, outline="")
 
-        # Nombres de Avenidas
+        # 6. Nombres de Avenidas
         self.canvas.create_text(110, 202, text="AV. DEL LIBERTADOR (BI)", fill="#718096", font=("Courier New", 8, "bold"), anchor="w")
         self.canvas.create_text(690, 202, text="AV. DEL LIBERTADOR (BI)", fill="#718096", font=("Courier New", 8, "bold"), anchor="e")
         
@@ -113,7 +126,7 @@ class PlanoVialApp:
         self.canvas.create_text(625, 45, text="AV. RIVADAVIA (BI)", fill="#718096", font=("Courier New", 8, "bold"), anchor="w")
         self.canvas.create_text(625, 755, text="AV. RIVADAVIA (BI)", fill="#718096", font=("Courier New", 8, "bold"), anchor="w")
 
-        # Leyenda y escala
+        # 7. Rejilla y Leyenda
         for val in range(100, self.catastro.width, 100):
             self.canvas.create_text(val, 15, text=f"{val}m", fill="#00f0ff", font=("Courier New", 8))
             self.canvas.create_line(val, 0, val, 6, fill="#00f0ff", width=1)
