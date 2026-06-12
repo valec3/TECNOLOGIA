@@ -3,27 +3,7 @@ import tkinter as tk
 import time
 
 from catastro import Catastro
-
-class Semaforo:
-    def __init__(self, id_semaforo, posicion, direccion_regulada, estado_inicial):
-        self.id = id_semaforo
-        self.x, self.y = posicion
-        self.direccion_regulada = direccion_regulada
-        self.estado = estado_inicial
-        self.tiempos_fase = {"VERDE": 5.0, "AMARILLO": 2.0, "ROJO": 7.0}
-        self.tiempo_acumulado = 0.0
-
-    def actualizar(self, delta_time):
-        self.tiempo_acumulado += delta_time
-        limite = self.tiempos_fase[self.estado]
-        if self.tiempo_acumulado >= limite:
-            self.tiempo_acumulado = 0.0
-            if self.estado == "VERDE":
-                self.estado = "AMARILLO"
-            elif self.estado == "AMARILLO":
-                self.estado = "ROJO"
-            elif self.estado == "ROJO":
-                self.estado = "VERDE"
+from senaforo import Semaforo
 
 class PlanoVialApp:
     def __init__(self, root):
@@ -95,10 +75,7 @@ class PlanoVialApp:
 
         # Semáforos
         for sem in self.semaforos:
-            color_hex = "#ff0055" if sem.estado == "ROJO" else ("#ffcc00" if sem.estado == "AMARILLO" else "#39ff14")
-            self.canvas.create_oval(sem.x - 9, sem.y - 9, sem.x + 9, sem.y + 9, fill="#121214", outline="#33333b", width=2)
-            self.canvas.create_oval(sem.x - 7, sem.y - 7, sem.x + 7, sem.y + 7, outline=color_hex, width=1)
-            self.canvas.create_oval(sem.x - 5, sem.y - 5, sem.x + 5, sem.y + 5, fill=color_hex, outline="")
+            sem.dibujar(self.canvas)
 
         # Nombres de Avenidas
         self.canvas.create_text(110, 202, text="AV. DEL LIBERTADOR (BI)", fill="#718096", font=("Courier New", 8, "bold"), anchor="w")
