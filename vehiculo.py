@@ -34,6 +34,7 @@ SEMI_AV      = 40     # semiancho de avenida (±40 px desde el centro)
 CARRIL_OFF   = 18     # offset del carril respecto al centro de la avenida
 MARGEN_GIRO  = 38     # radio de zona de intersección donde se permite girar
 FRENADO_SEM  = 55     # distancia a la que el coche frena ante semáforo rojo
+EPS_VEL      = 0.03   # velocidad mínima para considerar que el vehículo se mueve
 
 
 class CarrilVial:
@@ -194,6 +195,8 @@ class AgenteVehiculo:
             "angulo":     round(self.angulo % 360, 1),
             "velocidad":  round(self.vel, 3),
             "carril":     self.carril_actual.orient,
+            "sentido":     self.carril_actual.sentido,
+            "en_reversa":  self.vel < -EPS_VEL,
             "frenando":   self.frenando,
             "bloqueado":  self.bloqueado_sem,
             "seleccionado": self.seleccionado,
@@ -219,52 +222,77 @@ class AgenteVehiculo:
         if not self.seleccionado:
             return
 
+        teclas_norm = {t.lower() for t in teclas_activas}
+
         # Aceleración
-        if "Up" in teclas_activas or "w" in teclas_activas:
+        if "up" in teclas_norm or "w" in teclas_norm:
             self.vel = min(self.vel + self.ACEL_PASO, self.ACEL_MAX)
 
         # Freno / reversa
-        if "Down" in teclas_activas or "s" in teclas_activas:
+        if "down" in teclas_norm or "s" in teclas_norm:
             if self.vel > 0:
                 self.vel = max(0.0, self.vel - self.ACEL_FREN)
             else:
-                self.vel = max(-self.VEL_REV, self.vel - self.ACEL_PASO * 0.5)
+                self.vel = max(-self.VEL_REV, self.vel - self.ACEL_PASO)
 
         # Freno de emergencia
-        if "space" in teclas_activas:
+        if "space" in teclas_norm:
             self.vel *= 0.80
 
         # Giro — solo registrar la intención; se ejecuta en intersección
-        if "Left" in teclas_activas or "a" in teclas_activas:
+        if "left" in teclas_norm or "a" in teclas_norm:
             self._quiere_girar_izq = True
-        if "Right" in teclas_activas or "d" in teclas_activas:
+        if "right" in teclas_norm or "d" in teclas_norm:
             self._quiere_girar_der = True
 
     # ── lógica de semáforo: detectar si hay rojo adelante ───────────────────
+    def _sentido_movimiento(self):
+        """
+        Devuelve el sentido real en el eje del carril.
+        Si el vehículo retrocede, se mueve en sentido contrario al carril.
+        """
+        if self.vel < -EPS_VEL:
+            return -self.carril_actual.sentido
+        return self.carril_actual.sentido
+
+    def _estado_semaforo_interseccion(self, semaforos, ix, iy, orient):
+        """Obtiene el semáforo que regula una intersección para H o V."""
+        for sem in semaforos:
+            if sem.direccion_regulada != orient:
+                continue
+            if abs(sem.x - ix) <= FRENADO_SEM and abs(sem.y - iy) <= FRENADO_SEM:
+                return sem.estado
+        return None
+
     def _verificar_semaforo(self, semaforos):
         """
         Revisa si hay un semáforo en rojo en la dirección de avance
         dentro del radio de frenado.
         """
         c = self.carril_actual
-        for sem in semaforos:
-            # Solo el semáforo que regula la misma dirección
-            if sem.direccion_regulada != c.orient:
-                continue
-            sx, sy = sem.x, sem.y
+        sentido_real = self._sentido_movimiento()
 
+        for nodo in self.catastro.intersecciones:
+            ix, iy = nodo["pos"]
+            estado_sem = self._estado_semaforo_interseccion(semaforos, ix, iy, c.orient)
+            if estado_sem is None:
+                continue
+
+            # Línea de pare antes de entrar al cruce, según la dirección real.
             if c.orient == "H":
-                dist_adelante = (sx - self.x) * c.sentido
-                dist_lateral  = abs(sy - self.y)
+                linea_pare = ix - sentido_real * SEMI_AV
+                dist_adelante = (linea_pare - self.x) * sentido_real
+                dist_lateral = abs(iy - self.y)
             else:
-                dist_adelante = (sy - self.y) * c.sentido
-                dist_lateral  = abs(sx - self.x)
+                linea_pare = iy - sentido_real * SEMI_AV
+                dist_adelante = (linea_pare - self.y) * sentido_real
+                dist_lateral = abs(ix - self.x)
 
             if 0 < dist_adelante < FRENADO_SEM and dist_lateral < SEMI_AV:
-                if sem.estado == "ROJO":
+                if estado_sem == "ROJO":
                     self.bloqueado_sem = True
                     return
-                elif sem.estado == "AMARILLO" and dist_adelante < FRENADO_SEM * 0.6:
+                elif estado_sem == "AMARILLO" and dist_adelante < FRENADO_SEM * 0.6:
                     self.bloqueado_sem = True
                     return
         self.bloqueado_sem = False
@@ -334,19 +362,28 @@ class AgenteVehiculo:
                 else:
                     self.y = float(mejor.coord_fija)
                 self.angulo = self._angulo_carril(mejor)
-                self.vel = max(0.5, self.vel * 0.7)   # reduce velocidad al girar
+                if abs(self.vel) > EPS_VEL:
+                    signo = 1 if self.vel > 0 else -1
+                    self.vel = signo * max(0.3, abs(self.vel) * 0.7)
 
         self._quiere_girar_izq = False
         self._quiere_girar_der = False
 
     # ── actualizar física y posición ─────────────────────────────────────────
+    def _frenar_hasta_cero(self, fuerza):
+        """Reduce la velocidad manteniendo su signo hasta detener el vehículo."""
+        if self.vel > 0:
+            self.vel = max(0.0, self.vel - fuerza)
+        elif self.vel < 0:
+            self.vel = min(0.0, self.vel + fuerza)
+
     def actualizar(self, semaforos):
         # Verificar semáforo
         self._verificar_semaforo(semaforos)
 
         # Bloqueo por semáforo
-        if self.bloqueado_sem and self.vel > 0:
-            self.vel = max(0.0, self.vel - self.ACEL_FREN * 1.5)
+        if self.bloqueado_sem and abs(self.vel) > EPS_VEL:
+            self._frenar_hasta_cero(self.ACEL_FREN * 1.5)
             self.frenando = True
         else:
             self.frenando = self.bloqueado_sem
@@ -409,7 +446,6 @@ class AgenteVehiculo:
         # Rastro de movimiento
         if len(self.historial) > 3:
             for i in range(1, len(self.historial)):
-                alpha_r = int(i / len(self.historial) * 255)
                 # En Tkinter no hay alpha, simulamos con opacidad via color hex
                 frac = i / len(self.historial)
                 r_c  = int(frac * 80)
@@ -428,7 +464,6 @@ class AgenteVehiculo:
         # Etiqueta
         etiq_y = self.y - 28
         # Fondo de etiqueta
-        label = f" {self.id} "
         sel_color = "#00e878" if self.seleccionado else "#888888"
         canvas.create_rectangle(
             self.x - 22, etiq_y - 7,
@@ -468,7 +503,6 @@ class AgenteVehiculo:
         canvas.create_polygon(t, fill=self.color_techo, outline="")
 
         # Parabrisas (delantero)
-        pw = W2 * 0.45
         pb = [rot(tw2 * 0.35, -th2 + 1), rot(tw2 * 0.8, -th2 + 1),
               rot(tw2 * 0.8, th2 - 1),   rot(tw2 * 0.35, th2 - 1)]
         canvas.create_polygon(pb, fill="#96d4e8", outline="")
