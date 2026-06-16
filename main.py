@@ -5,7 +5,7 @@ SISTEMA MULTI-AGENTE DE TRÁFICO URBANO — main.py
 Módulos integrados:
   ✔ Catastro      → geometría del plano vial
   ✔ Semáforo      → control de fases (VERDE/AMARILLO/ROJO)
-  ✔ Vehículo      → AV-01 (rojo) y AV-02 (azul), controlables con teclado
+  ✔ Vehículo      → AV-01, AV-02, AV-03 y AV-04, controlables con teclado
 
 CONTROLES:
   ↑ / W      Acelerar
@@ -13,7 +13,7 @@ CONTROLES:
   ← / A      Girar a la izquierda en la próxima intersección
   → / D      Girar a la derecha en la próxima intersección
   ESPACIO    Freno de emergencia
-  TAB        Alternar entre AV-01 y AV-02
+  TAB        Alternar entre los 4 vehículos
   ESC        Salir
 """
 
@@ -30,12 +30,12 @@ from vigilante  import AgenteVigilante
 #  PANEL HUD (información de los vehículos en pantalla)
 # ════════════════════════════════════════════════════════════════════════════
 class PanelHUD:
-    """Dibuja el panel de telemetría lateral para los dos vehículos."""
+    """Dibuja el panel de telemetría lateral para los vehículos."""
 
     PX   = 610   # x de inicio del panel
     PY   = 30    # y de inicio
     PW   = 175   # ancho
-    PH   = 340   # alto
+    PH   = 500   # alto
 
     # Constantes visuales
     BG   = "#0d1117"
@@ -242,35 +242,36 @@ class PlanoVialApp:
     def _inicializar_vehiculos(self):
         carriles = construir_carriles(self.catastro)
 
-        # AV-01 — Rojo — carril horizontal superior de la avenida y=250, sentido +1 (→)
-        carril_av01 = next(c for c in carriles
-                           if c.orient == "H" and c.sentido == +1
-                           and abs(c.coord_fija - (250 - 18)) < 5)
-        av01 = AgenteVehiculo(
-            id_vehiculo       = "AV-01",
-            catastro          = self.catastro,
-            carril_inicial    = carril_av01,
-            pos_inicial       = 80,            # x inicial
-            color_carroceria  = "#dd2233",
-            color_techo       = "#991122",
-        )
-        av01.seleccionado = True
+        def buscar_carril(orient, sentido, coord_fija):
+            return next(c for c in carriles
+                        if c.orient == orient
+                        and c.sentido == sentido
+                        and abs(c.coord_fija - coord_fija) < 5)
 
-        # AV-02 — Azul — carril vertical derecho de la avenida x=550, sentido +1 (↓)
-        carril_av02 = next(c for c in carriles
-                           if c.orient == "V" and c.sentido == +1
-                           and abs(c.coord_fija - (550 + 18)) < 5)
-        av02 = AgenteVehiculo(
-            id_vehiculo       = "AV-02",
-            catastro          = self.catastro,
-            carril_inicial    = carril_av02,
-            pos_inicial       = 80,            # y inicial
-            color_carroceria  = "#2255cc",
-            color_techo       = "#113388",
-        )
-        av02.seleccionado = False
+        configuraciones = [
+            # AV-01 — Rojo — horizontal superior, avanza hacia la derecha.
+            ("AV-01", buscar_carril("H", +1, 250 - 18), 80,  "#dd2233", "#991122"),
+            # AV-02 — Azul — vertical derecha, avanza hacia abajo.
+            ("AV-02", buscar_carril("V", +1, 550 + 18), 80,  "#2255cc", "#113388"),
+            # AV-03 — Verde — horizontal inferior, avanza hacia la izquierda.
+            ("AV-03", buscar_carril("H", -1, 550 + 18), 720, "#22aa55", "#116633"),
+            # AV-04 — Amarillo — vertical izquierda, avanza hacia arriba.
+            ("AV-04", buscar_carril("V", -1, 250 - 18), 720, "#e6b422", "#9a6f00"),
+        ]
 
-        self.vehiculos = [av01, av02]
+        self.vehiculos = [
+            AgenteVehiculo(
+                id_vehiculo=id_vehiculo,
+                catastro=self.catastro,
+                carril_inicial=carril,
+                pos_inicial=pos_inicial,
+                color_carroceria=color_carroceria,
+                color_techo=color_techo,
+            )
+            for id_vehiculo, carril, pos_inicial, color_carroceria, color_techo
+            in configuraciones
+        ]
+        self.vehiculos[0].seleccionar(True)
 
     # ── eventos de teclado ───────────────────────────────────────────────────
     def _on_key_press(self, event):
@@ -283,9 +284,9 @@ class PlanoVialApp:
 
         if key == "Tab":
             # Alternar vehículo activo
-            self.vehiculos[self.veh_activo].seleccionado = False
+            self.vehiculos[self.veh_activo].seleccionar(False)
             self.veh_activo = (self.veh_activo + 1) % len(self.vehiculos)
-            self.vehiculos[self.veh_activo].seleccionado = True
+            self.vehiculos[self.veh_activo].seleccionar(True)
             # Evitar que Tab cambie el foco de tkinter
             return "break"
 

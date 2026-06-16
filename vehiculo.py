@@ -7,7 +7,7 @@ Integración con: catastro.py, main.py (semáforos, intersecciones)
 Cada vehículo:
   - Circula SOLO por las avenidas del catastro (no invade manzanas)
   - Obedece los semáforos de las intersecciones
-  - Es controlable con teclado (2 coches, se alterna con TAB)
+  - Es controlable con teclado (4 coches, se alterna con TAB)
   - Actualiza shared_state para comunicación con otros agentes
 
 Controles (coche activo):
@@ -16,7 +16,7 @@ Controles (coche activo):
   ← / A   → Girar izquierda (solo en intersecciones o carriles)
   → / D   → Girar derecha  (solo en intersecciones o carriles)
   SPACE   → Freno de emergencia
-  TAB     → Alternar entre AV-01 y AV-02
+  TAB     → Alternar entre vehículos
 """
 
 import math
@@ -201,6 +201,11 @@ class AgenteVehiculo:
             "bloqueado":  self.bloqueado_sem,
             "seleccionado": self.seleccionado,
         }
+
+    def seleccionar(self, seleccionado):
+        """Marca este vehículo como activo/inactivo y publica el cambio."""
+        self.seleccionado = seleccionado
+        self._sync()
 
     # ── señal de semáforo (llamado por main.py) ─────────────────────────────
     def recibir_semaforo(self, estado_sem):
