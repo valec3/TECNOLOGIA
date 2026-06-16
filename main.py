@@ -20,9 +20,10 @@ CONTROLES:
 import tkinter as tk
 import time
 
-from catastro import Catastro
-from senaforo import Semaforo
-from vehiculo  import AgenteVehiculo, construir_carriles, shared_state
+from catastro   import Catastro
+from senaforo   import Semaforo
+from vehiculo   import AgenteVehiculo, construir_carriles, shared_state
+from vigilante  import AgenteVigilante
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -221,6 +222,9 @@ class PlanoVialApp:
 
         # ── HUD ──────────────────────────────────────────────────────────────
         self.hud = PanelHUD()
+
+        # ── Agente Vigilante ─────────────────────────────────────────────────────
+        self.vigilante = AgenteVigilante()
 
         # ── Tiempo ───────────────────────────────────────────────────────────
         self.last_time = time.time()
@@ -435,6 +439,9 @@ class PlanoVialApp:
         # ── HUD de vehículos ─────────────────────────────────────────────────
         self.hud.dibujar(self.canvas, self.vehiculos, self.tick)
 
+        # ── Panel Agente Vigilante ───────────────────────────────────────────────
+        self.vigilante.dibujar(self.canvas, self.tick)
+
     # ── bucle principal ──────────────────────────────────────────────────────
     def tick_loop(self):
         now        = time.time()
@@ -450,6 +457,9 @@ class PlanoVialApp:
             if veh.seleccionado:
                 veh.procesar_teclas(self.teclas_activas)
             veh.actualizar(self.semaforos)
+
+        # Actualizar Agente Vigilante
+        self.vigilante.actualizar(self.vehiculos, self.semaforos, self.catastro, self.tick)
 
         # Renderizar
         self.renderizar()
