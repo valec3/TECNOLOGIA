@@ -1,10 +1,9 @@
 import os
+import json
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
-import json
-
-# Cargar .env buscando en el directorio principal (un nivel arriba del directorio api/)
+# Cargar .env buscando en el directorio principal
 dotenv_path = os.path.join(os.path.dirname(__file__), "../.env")
 load_dotenv(dotenv_path=dotenv_path)
 
@@ -144,12 +143,11 @@ class MockSupabaseClient:
     def __init__(self):
         self.data_store = {}
         self.base_dir = os.path.dirname(os.path.abspath(__file__))
-        self.db_path = os.path.join(self.base_dir, "mapas_db.json")
-        self.seed_path = os.path.join(self.base_dir, "mapas.json")
+        self.db_path = os.path.join(self.base_dir, "db_local.json")
+        self.seed_path = os.path.join(self.base_dir, "seed_data.json")
         self.load_data()
 
     def load_data(self):
-        # Intentar cargar desde el archivo de base de datos local
         if os.path.exists(self.db_path):
             try:
                 with open(self.db_path, "r", encoding="utf-8") as f:
@@ -158,7 +156,6 @@ class MockSupabaseClient:
             except Exception as e:
                 print(f"Error al cargar base de datos local desde {self.db_path}: {e}")
 
-        # Fallback: Cargar desde mapas.json inicial
         if os.path.exists(self.seed_path):
             try:
                 with open(self.seed_path, "r", encoding="utf-8") as f:
@@ -183,7 +180,7 @@ class MockSupabaseClient:
                         }
                 self.save_data()
             except Exception as e:
-                print(f"Error al inicializar base de datos mock desde mapas.json: {e}")
+                print(f"Error al inicializar base de datos mock desde seed_data.json: {e}")
 
     def save_data(self):
         try:
@@ -198,7 +195,7 @@ class MockSupabaseClient:
         raise ValueError(f"Tabla '{name}' no soportada por el cliente mock.")
 
 if supabase is None:
-    print("WARNING: Supabase URL o Key no configurados en .env. Se usará una base de datos local simulada (mapas_db.json).")
+    print("WARNING: Supabase URL o Key no configurados. Se usará una base de datos local simulada (db_local.json).")
     supabase = MockSupabaseClient()
     is_mock = True
 
