@@ -1,39 +1,63 @@
-# Plano Metropolitano de Tránsito - Catastro MAS
+# Catastro Metropolitano - Administrador de Mapas
 
-Este proyecto consiste en una aplicación de visualización gráfica en Python utilizando la biblioteca estándar **Tkinter**. Permite representar el plano catastral físico de una red vial urbana con avenidas, sentidos de carriles, rejillas métricas e infraestructura semafórica dinámica.
-
----
-
-## 🗺️ Componentes del Plano Vial
-
-El diseño visual está implementado de forma 100% independiente en [main.py](file:///c:/Users/User/Development/unap/tecnologias-emergentes/tecnologias-emergentes/main.py) bajo una estética de modo oscuro y neón técnico, ideal para simulaciones de radar o catastro:
-
-1. **Avenidas Horizontales y Verticales**:
-   - Representadas por pistas oscuras de 80px de ancho con líneas divisorias centrales amarillas discontinuas.
-   - Rotuladas con sus nombres oficiales y tipología bidireccional:
-     - *Av. del Libertador (BI)* e *Av. de Mayo (BI)* (Horizontales)
-     - *Av. 9 de Julio (BI)* e *Av. Rivadavia (BI)* (Verticales)
-2. **Sentidos de Circulación**:
-   - Cada carril dispone de indicadores de dirección (`←`, `→`, `↑`, `↓`) dibujados directamente sobre la calzada para señalizar visualmente el flujo vial permitido.
-3. **Nodos de Intersección**:
-   - Cruces con rejillas de neón celeste (`#00f0ff`) identificados con su nombre y plaza asociada en el centro:
-     - **NODO NO (San Martín)**
-     - **NODO NE (Belgrano)**
-     - **NODO SO (Sarmiento)**
-     - **NODO SE (Mitre)**
-4. **Semáforos Dinámicos**:
-   - Cada intersección cuenta con dos semáforos (uno para regular el flujo horizontal y otro para el vertical).
-   - Los semáforos ciclan de manera autónoma sus colores de fase (Verde $\rightarrow$ Amarillo $\rightarrow$ Rojo) mediante un temporizador programado con `root.after()`.
-   - Cuentan con un desfase inicial para asegurar la seguridad vial teórica de los cruces (cuando el horizontal está en verde, el vertical está en rojo).
+Este proyecto es una aplicación web moderna para la gestión y visualización de planos catastrales y redes viales urbanas. Cuenta con una API REST robusta construida en **FastAPI**, persistencia en la nube utilizando **Supabase** y una interfaz interactiva de alto rendimiento en **HTML5 Canvas**.
 
 ---
 
-## 🛠️ Ejecución de la Aplicación
+## 🚀 Arquitectura del Proyecto
 
-Dado que el proyecto ha sido simplificado y se removieron todas las dependencias y módulos externos de simulación de tráfico, **el plano es completamente autocontenido en un solo script**.
+El repositorio está organizado de manera modular:
 
-Para ejecutar la visualización en Windows:
-```bash
-python main.py
+*   **`api/`**: Contiene la lógica del backend en FastAPI, validaciones con Pydantic y cliente de Supabase.
+*   **`ui/`**: Interfaz de usuario (frontend) interactiva construida con HTML5, CSS3 (con estética premium neón/glassmorphic) y JS vanilla.
+*   **`seed.py`**: Script de automatización para migrar configuraciones locales de mapas hacia Supabase.
+
+---
+
+## 🛠️ Configuración y Puesta en Marcha
+
+### 1. Variables de Entorno
+Crea un archivo `.env` en la raíz del proyecto con tus credenciales de Supabase:
+```env
+SUPABASE_URL=https://tu-proyecto.supabase.co
+SUPABASE_KEY=tu-anon-key
 ```
-*(No requiere la instalación de librerías de terceros ya que utiliza Tkinter, que forma parte de la biblioteca estándar de Python).*
+
+### 2. Base de Datos
+Crea la tabla ejecutando esta sentencia en el **SQL Editor** de tu consola de Supabase:
+```sql
+create table mapas (
+  clave text primary key,
+  nombre text not null,
+  color_tema text not null default '#00f0ff',
+  width integer not null default 800,
+  height integer not null default 800,
+  config jsonb not null default '{}'::jsonb
+);
+```
+
+### 3. Migrar Datos Iniciales
+Si deseas importar los mapas base al servidor de base de datos, ejecuta:
+```bash
+python seed.py
+```
+
+### 4. Ejecución Local
+Inicia el servidor local de desarrollo:
+```bash
+python -m api.main
+```
+Accede a la aplicación en tu navegador: **[http://localhost:8000](http://localhost:8000)**.
+
+---
+
+## ☁️ Deploy en Render
+
+Para desplegar este proyecto en Render:
+
+1.  Crea un nuevo **Web Service**.
+2.  Conecta tu repositorio de GitHub.
+3.  Usa los siguientes parámetros de configuración:
+    *   **Build Command**: `pip install -r requirements.txt`
+    *   **Start Command**: `uvicorn api.main:app --host 0.0.0.0 --port $PORT`
+4.  Agrega las variables de entorno (`SUPABASE_URL` y `SUPABASE_KEY`) en la sección **Environment** del panel de Render.

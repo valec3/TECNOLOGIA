@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador & Gestor de Catastro Metropolitano</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand">
+                <i class="fa-solid fa-map-location-dot logo-icon"></i>
+                <h2>METRO <span>MAPS</span></h2>
+            </div>
+            
+            <div class="section-title">
+                <span>Mis Distritos</span>
+                <button id="btn-open-create-modal" class="btn-icon-plus" title="Crear Nuevo Distrito">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            </div>
+            
+            <ul id="map-list" class="map-list">
+                <!-- Se poblará dinámicamente -->
+                <div class="loading-spinner"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando distritos...</div>
+            </ul>
+
+            <div class="sidebar-footer">
+                <p>Tecnologías Emergentes</p>
+                <span>FastAPI + Supabase</span>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="main-header">
+                <div class="header-info">
+                    <h1 id="active-map-title">Cargando distrito...</h1>
+                    <span id="active-map-badge" class="badge">Clave: -</span>
+                </div>
+                <div class="header-actions">
+                    <button id="btn-edit-active" class="btn btn-secondary">
+                        <i class="fa-solid fa-pen-to-square"></i> Editar Mapa
+                    </button>
+                    <button id="btn-delete-active" class="btn btn-danger">
+                        <i class="fa-solid fa-trash-can"></i> Eliminar
+                    </button>
+                </div>
+            </header>
+
+            <!-- Workspace -->
+            <div class="workspace">
+                <!-- Map Viewer -->
+                <div class="viewer-card">
+                    <div class="canvas-container">
+                        <canvas id="map-canvas" width="800" height="800"></canvas>
+                    </div>
+                </div>
+
+                <!-- Info panel & metadata -->
+                <div class="info-sidebar">
+                    <div class="info-card">
+                        <h3><i class="fa-solid fa-circle-info"></i> Metadatos de Red</h3>
+                        <div class="meta-grid">
+                            <div class="meta-item">
+                                <span class="label">Resolución</span>
+                                <span id="meta-resolution" class="value">800 x 800 px</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="label">Calles Horizontales</span>
+                                <span id="meta-horiz-count" class="value">0</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="label">Calles Verticales</span>
+                                <span id="meta-vert-count" class="value">0</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="label">Curvas Especiales</span>
+                                <span id="meta-curves-count" class="value">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+                    <div class="info-card">
+                        <h3><i class="fa-solid fa-road"></i> Nombres Viales</h3>
+                        <ul id="avenues-list" class="avenues-list">
+                            <!-- Se poblará dinámicamente -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Form (Crear/Editar Mapa) -->
+    <div id="map-modal" class="modal">
+        <div class="modal-content glass">
+            <div class="modal-header">
+                <h3 id="modal-title">Crear Nuevo Distrito Catastral</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="map-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="map-clave">Clave Única (ID en minúsculas)</label>
+                            <input type="text" id="map-clave" required placeholder="ej: noreste">
+                        </div>
+                        <div class="form-group">
+                            <label for="map-nombre">Nombre de la Ciudad/Distrito</label>
+                            <input type="text" id="map-nombre" required placeholder="ej: DISTRITO NORESTE">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="map-color">Color del Tema (Neon Hex)</label>
+                            <div class="color-picker-wrapper">
+                                <input type="color" id="map-color" value="#00f0ff">
+                                <input type="text" id="map-color-hex" value="#00f0ff" maxlength="7">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="map-size">Tamaño Cuadrado (px)</label>
+                            <input type="number" id="map-size" value="800" min="400" max="1200" step="100">
+                        </div>
+                    </div>
+
+                    <div class="section-divider">Geometría Vial</div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="map-y-coords">Avenidas Horizontales (Coordenadas Y separadas por comas)</label>
+                            <input type="text" id="map-y-coords" value="300, 600" placeholder="ej: 250, 550">
+                        </div>
+                        <div class="form-group">
+                            <label for="map-x-coords">Avenidas Verticales (Coordenadas X separadas por comas)</label>
+                            <input type="text" id="map-x-coords" value="300, 600" placeholder="ej: 250, 550">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="map-names-h">Nombres Calles Horizontales (Comas, ej: H1, H2...)</label>
+                            <input type="text" id="map-names-h" value="Av. Libertador, Av. de Mayo" placeholder="Separados por comas">
+                        </div>
+                        <div class="form-group">
+                            <label for="map-names-v">Nombres Calles Verticales (Comas, ej: V1, V2...)</label>
+                            <input type="text" id="map-names-v" value="Av. 9 de Julio, Av. Rivadavia" placeholder="Separados por comas">
+                        </div>
+                    </div>
+
+
+
+                    <!-- JSON Editor para usuarios avanzados (oculto por defecto) -->
+                    <div class="advanced-toggle">
+                        <button type="button" id="btn-toggle-json" class="btn-link">
+                            <i class="fa-solid fa-code"></i> Configuración Avanzada (JSON)
+                        </button>
+                    </div>
+                    <div id="json-editor-container" class="form-group hidden">
+                        <label for="map-json-config">Configuración Geométrica Completa (JSON)</label>
+                        <textarea id="map-json-config" rows="8" placeholder="Ingresá la configuración JSON aquí..."></textarea>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary close-modal-btn">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="btn-save-map">Crear Distrito</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script de la aplicación -->
+    <script src="app.js"></script>
+</body>
+</html>
