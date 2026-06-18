@@ -90,7 +90,12 @@
                         </div>
                     </div>
 
-
+                    <div class="info-card">
+                        <h3><i class="fa-solid fa-circle-nodes"></i> Conexiones de Red</h3>
+                        <ul id="connections-list" class="connections-list">
+                            <!-- Se poblará dinámicamente -->
+                        </ul>
+                    </div>
 
                     <div class="info-card">
                         <h3><i class="fa-solid fa-road"></i> Nombres Viales</h3>
@@ -161,7 +166,25 @@
                         </div>
                     </div>
 
-
+                    <div class="section-divider">Conexiones de Red (Opcional)</div>
+                    <div class="form-row four-cols">
+                        <div class="form-group">
+                            <label for="conn-norte">Norte (Clave)</label>
+                            <input type="text" id="conn-norte" placeholder="ej: norte">
+                        </div>
+                        <div class="form-group">
+                            <label for="conn-sur">Sur (Clave)</label>
+                            <input type="text" id="conn-sur" placeholder="ej: sur">
+                        </div>
+                        <div class="form-group">
+                            <label for="conn-este">Este (Clave)</label>
+                            <input type="text" id="conn-este" placeholder="ej: este">
+                        </div>
+                        <div class="form-group">
+                            <label for="conn-oeste">Oeste (Clave)</label>
+                            <input type="text" id="conn-oeste" placeholder="ej: oeste">
+                        </div>
+                    </div>
 
                     <!-- JSON Editor para usuarios avanzados (oculto por defecto) -->
                     <div class="advanced-toggle">

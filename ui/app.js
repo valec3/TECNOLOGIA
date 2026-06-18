@@ -28,6 +28,10 @@ const inputYCoords = document.getElementById('map-y-coords');
 const inputXCoords = document.getElementById('map-x-coords');
 const inputNamesH = document.getElementById('map-names-h');
 const inputNamesV = document.getElementById('map-names-v');
+const inputConnNorte = document.getElementById('conn-norte');
+const inputConnSur = document.getElementById('conn-sur');
+const inputConnEste = document.getElementById('conn-este');
+const inputConnOeste = document.getElementById('conn-oeste');
 
 const btnToggleJson = document.getElementById('btn-toggle-json');
 const jsonEditorContainer = document.getElementById('json-editor-container');
@@ -82,6 +86,10 @@ function setupEventListeners() {
         inputXCoords.value = '250, 550';
         inputNamesH.value = 'Av. del Libertador, Av. de Mayo';
         inputNamesV.value = 'Av. 9 de Julio, Av. Rivadavia';
+        inputConnNorte.value = '';
+        inputConnSur.value = '';
+        inputConnEste.value = '';
+        inputConnOeste.value = '';
         
         jsonEditorContainer.classList.add('hidden');
         modalEl.classList.add('open');
@@ -131,10 +139,13 @@ function setupEventListeners() {
         inputNamesH.value = namesH;
         inputNamesV.value = namesV;
 
-
+        const conns = conf.conexiones || {};
+        inputConnNorte.value = conns.norte || '';
+        inputConnSur.value = conns.sur || '';
+        inputConnEste.value = conns.este || '';
+        inputConnOeste.value = conns.oeste || '';
 
         jsonEditorContainer.classList.add('hidden');
-        modalEl.classList.open = true;
         modalEl.classList.add('open');
     });
 
@@ -238,8 +249,29 @@ function selectMap(map) {
     document.getElementById('meta-horiz-count').textContent = (map.config.avenidas_horizontales || []).length;
     document.getElementById('meta-vert-count').textContent = (map.config.avenidas_verticales || []).length;
     document.getElementById('meta-curves-count').textContent = (map.config.curvas || []).length;
-
-
+    // Conexiones de red
+    const connectionsListEl = document.getElementById('connections-list');
+    if (connectionsListEl) {
+        connectionsListEl.innerHTML = '';
+        const connections = map.config.conexiones || {};
+        const directions = ['norte', 'sur', 'este', 'oeste'];
+        directions.forEach(dir => {
+            const li = document.createElement('li');
+            const dest = connections[dir];
+            if (dest) {
+                li.innerHTML = `
+                    <span class="direction">${dir.toUpperCase()}</span>
+                    <span class="dest" style="color: ${map.color_tema}; font-weight: bold;">${dest.toUpperCase()}</span>
+                `;
+            } else {
+                li.innerHTML = `
+                    <span class="direction">${dir.toUpperCase()}</span>
+                    <span class="dest void">SIN CONEXIÓN</span>
+                `;
+            }
+            connectionsListEl.appendChild(li);
+        });
+    }
 
     // Nombres viales
     const avenuesListEl = document.getElementById('avenues-list');
@@ -265,8 +297,8 @@ function selectMap(map) {
 // Generate geometry JSON object from normal input fields
 function getGeometryFromFields() {
     const size = parseInt(inputSize.value) || 800;
-    const yCoords = inputYCoords.value.split(',').map(s => parseInt(s.strip ? s.strip() : s.trim())).filter(n => !isNaN(n));
-    const xCoords = inputXCoords.value.split(',').map(s => parseInt(s.strip ? s.strip() : s.trim())).filter(n => !isNaN(n));
+    const yCoords = inputYCoords.value.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+    const xCoords = inputXCoords.value.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
     
     const namesH = inputNamesH.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
     const namesV = inputNamesV.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
@@ -315,13 +347,20 @@ function getGeometryFromFields() {
     const rango_x = calcBloques(xCoords, size);
     const rango_y = calcBloques(yCoords, size);
 
+    const conexiones = {};
+    if (inputConnNorte.value.trim()) conexiones.norte = inputConnNorte.value.trim().toLowerCase();
+    if (inputConnSur.value.trim()) conexiones.sur = inputConnSur.value.trim().toLowerCase();
+    if (inputConnEste.value.trim()) conexiones.este = inputConnEste.value.trim().toLowerCase();
+    if (inputConnOeste.value.trim()) conexiones.oeste = inputConnOeste.value.trim().toLowerCase();
+
     return {
         avenidas_horizontales: yCoords.map(y => ({ y, x_ini: 0, x_fin: size })),
         avenidas_verticales: xCoords.map(x => ({ x, y_ini: 0, y_fin: size })),
         curvas: activeMap && isEditing ? (activeMap.config.curvas || []) : [], // Conserva curvas si se edita
         nombres_avenidas,
         intersecciones,
-        casas_config: { rango_x, rango_y }
+        casas_config: { rango_x, rango_y },
+        conexiones
     };
 }
 

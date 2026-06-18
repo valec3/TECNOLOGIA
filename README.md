@@ -39,7 +39,7 @@ create table mapas (
 ### 3. Migrar Datos Iniciales
 Si deseas importar los mapas base al servidor de base de datos, ejecuta:
 ```bash
-python seed.py
+python -m api.seed
 ```
 
 ### 4. Ejecución Local
@@ -58,6 +58,6 @@ Para desplegar este proyecto en Render:
 1.  Crea un nuevo **Web Service**.
 2.  Conecta tu repositorio de GitHub.
 3.  Usa los siguientes parámetros de configuración:
-    *   **Build Command**: `pip install -r requirements.txt`
+    *   **Build Command**: `pip install -r api/requirements.txt`
     *   **Start Command**: `uvicorn api.main:app --host 0.0.0.0 --port $PORT`
 4.  Agrega las variables de entorno (`SUPABASE_URL` y `SUPABASE_KEY`) en la sección **Environment** del panel de Render.

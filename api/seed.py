@@ -1,15 +1,23 @@
 # -*- coding: utf-8 -*-
 import json
-from database import get_supabase
-from schemas import MapCreate
+import os
+import sys
+
+# Agregar el directorio principal al PATH para permitir importaciones de 'api'
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from api.database import get_supabase
+from api.schemas import MapCreate
 
 def sembrar_datos():
-    print("Loading maps from local mapas.json...")
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    json_path = os.path.join(base_dir, "mapas.json")
+    print(f"Loading maps from local {json_path}...")
     try:
-        with open("mapas.json", "r", encoding="utf-8") as f:
+        with open(json_path, "r", encoding="utf-8") as f:
             mapas_locales = json.load(f)
     except FileNotFoundError:
-        print("Error: mapas.json not found in current directory.")
+        print(f"Error: {json_path} not found.")
         return
     except Exception as e:
         print(f"Error reading mapas.json: {e}")

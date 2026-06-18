@@ -9,6 +9,7 @@ class MapConfig(BaseModel):
     nombres_avenidas: Dict[str, str] = Field(default_factory=dict)
     intersecciones: List[Dict[str, Any]] = Field(default_factory=list)
     casas_config: Dict[str, Any] = Field(default_factory=dict)
+    conexiones: Dict[str, str] = Field(default_factory=dict)
 
 class MapBase(BaseModel):
     clave: str = Field(..., description="Clave única del mapa (ej: centro, norte)")
