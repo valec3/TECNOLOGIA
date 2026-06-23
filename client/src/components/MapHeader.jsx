@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit3, Trash2, ArrowLeft, BookOpen } from 'lucide-react';
+import { Edit3, Trash2, ArrowLeft, BookOpen, Wifi, WifiOff } from 'lucide-react';
 
 export default function MapHeader({
   activeMap,
@@ -7,7 +7,8 @@ export default function MapHeader({
   onEdit,
   onDelete,
   onBack,
-  isSaving
+  isSaving,
+  wsConnected
 }) {
   const isViewMode = mode === 'view';
 
@@ -46,6 +47,22 @@ export default function MapHeader({
 
       {/* Action Buttons */}
       <div className="flex items-center gap-3">
+        {/* Indicador de conexión WebSocket */}
+        <div 
+          className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors ${
+            wsConnected 
+              ? 'bg-green-500/10 text-green-400 border border-green-500/30' 
+              : 'bg-red-500/10 text-red-400 border border-red-500/30'
+          }`}
+          title={wsConnected ? 'Conectado en tiempo real' : 'Desconectado - reconectando...'}
+        >
+          {wsConnected ? (
+            <Wifi className="w-3.5 h-3.5" />
+          ) : (
+            <WifiOff className="w-3.5 h-3.5 animate-pulse" />
+          )}
+          <span>{wsConnected ? 'Live' : 'Offline'}</span>
+        </div>
         {isViewMode ? (
           <>
             <a

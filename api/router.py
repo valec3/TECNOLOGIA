@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from api.db import get_supabase
 from api.models import MapaCreate, MapaUpdate, MapaResponse
+from api.websocket_manager import manager
 from supabase import Client
 
 router = APIRouter(prefix="/api/mapas", tags=["Mapas"])
@@ -27,7 +28,7 @@ def obtener_mapa(clave: str, db: Client = Depends(get_supabase)):
         raise HTTPException(status_code=500, detail=f"Error al buscar el mapa: {str(e)}")
 
 @router.post("", response_model=MapaResponse)
-def crear_mapa(mapa: MapaCreate, db: Client = Depends(get_supabase)):
+async def crear_mapa(mapa: MapaCreate, db: Client = Depends(get_supabase)):
     try:
         check = db.table("mapas").select("clave").eq("clave", mapa.clave).execute()
         if check.data:
@@ -37,6 +38,10 @@ def crear_mapa(mapa: MapaCreate, db: Client = Depends(get_supabase)):
         response = db.table("mapas").insert(payload).execute()
         if not response.data:
             raise HTTPException(status_code=500, detail="No se pudo registrar el mapa.")
+        
+        # Emitir evento WebSocket
+        await manager.emit_map_created(response.data[0])
+        
         return response.data[0]
     except HTTPException:
         raise
@@ -44,7 +49,7 @@ def crear_mapa(mapa: MapaCreate, db: Client = Depends(get_supabase)):
         raise HTTPException(status_code=500, detail=f"Error al registrar el mapa: {str(e)}")
 
 @router.put("/{clave}", response_model=MapaResponse)
-def actualizar_mapa(clave: str, mapa: MapaUpdate, db: Client = Depends(get_supabase)):
+async def actualizar_mapa(clave: str, mapa: MapaUpdate, db: Client = Depends(get_supabase)):
     try:
         check = db.table("mapas").select("clave").eq("clave", clave).execute()
         if not check.data:
@@ -57,6 +62,10 @@ def actualizar_mapa(clave: str, mapa: MapaUpdate, db: Client = Depends(get_supab
         response = db.table("mapas").update(payload).eq("clave", clave).execute()
         if not response.data:
             raise HTTPException(status_code=500, detail="No se pudo actualizar el mapa.")
+        
+        # Emitir evento WebSocket
+        await manager.emit_map_updated(clave, response.data[0])
+        
         return response.data[0]
     except HTTPException:
         raise
@@ -64,13 +73,17 @@ def actualizar_mapa(clave: str, mapa: MapaUpdate, db: Client = Depends(get_supab
         raise HTTPException(status_code=500, detail=f"Error al actualizar el mapa: {str(e)}")
 
 @router.delete("/{clave}")
-def eliminar_mapa(clave: str, db: Client = Depends(get_supabase)):
+async def eliminar_mapa(clave: str, db: Client = Depends(get_supabase)):
     try:
         check = db.table("mapas").select("clave").eq("clave", clave).execute()
         if not check.data:
             raise HTTPException(status_code=404, detail=f"Mapa '{clave}' no encontrado.")
         
         db.table("mapas").delete().eq("clave", clave).execute()
+        
+        # Emitir evento WebSocket
+        await manager.emit_map_deleted(clave)
+        
         return {"ok": True, "detail": f"Mapa '{clave}' eliminado exitosamente."}
     except HTTPException:
         raise

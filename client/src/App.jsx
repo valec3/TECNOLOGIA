@@ -5,7 +5,8 @@ import CanvasEditor from './components/CanvasEditor';
 import PropertiesPanel from './components/PropertiesPanel';
 import { generateDefaultBlocks, generateBlocksFromRanges, generateIntersections } from './geometryHelper';
 import { fetchMaps, fetchMapDetails, createMap, updateMap, deleteMap } from './api';
-import { Info, Map as MapIcon, Road } from 'lucide-react';
+import { connect, disconnect, subscribe, isConnected } from './api/ws';
+import { Info, Map as MapIcon, Road, Wifi, WifiOff } from 'lucide-react';
 
 export default function App() {
   const [maps, setMaps] = useState([]);
@@ -15,6 +16,7 @@ export default function App() {
   const [selectedElement, setSelectedElement] = useState(null); // { type, index }
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
 
   // Temporary editor state (clone of activeMap during edit/create)
   const [editorMap, setEditorMap] = useState(null);
@@ -45,6 +47,34 @@ export default function App() {
 
   useEffect(() => {
     loadMaps();
+
+    // Conectar WebSocket y suscribir a eventos
+    connect();
+
+    const unsubscribe = subscribe((message) => {
+      console.log('[WS] Evento recibido:', message.event, message.data);
+      
+      if (message.event === 'mapa:created' || 
+          message.event === 'mapa:updated' || 
+          message.event === 'mapa:deleted') {
+        // Recargar la lista de mapas cuando hay cambios
+        // (no interferimos con el editor si está en modo create/edit)
+        if (mode === 'view') {
+          loadMaps();
+        }
+      }
+    });
+
+    // Verificar estado de conexión periódicamente
+    const checkConnection = setInterval(() => {
+      setWsConnected(isConnected());
+    }, 1000);
+
+    return () => {
+      unsubscribe();
+      disconnect();
+      clearInterval(checkConnection);
+    };
   }, []);
 
   // Set active map and fetch details if needed
@@ -396,6 +426,7 @@ export default function App() {
           onDelete={handleDeleteActiveMap}
           onBack={handleCancel}
           isSaving={isSaving}
+          wsConnected={wsConnected}
         />
 
         {/* Content Body */}
