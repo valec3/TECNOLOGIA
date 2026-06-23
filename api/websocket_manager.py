@@ -50,15 +50,21 @@ class ConnectionManager:
 
     async def emit_map_created(self, mapa: dict):
         """Notifica creación de un nuevo mapa."""
-        await self.broadcast("mapas", "mapa:created", mapa)
+        await self.broadcast("mapas_global", "mapa:created", mapa)
 
     async def emit_map_updated(self, clave: str, mapa: dict):
         """Notifica actualización de un mapa."""
-        await self.broadcast("mapas", "mapa:updated", {"clave": clave, "mapa": mapa})
+        # Notificar a los que están viendo este mapa en específico
+        await self.broadcast(f"mapa_{clave}", "mapa:updated", {"clave": clave, "mapa": mapa})
+        # Notificar al listado general
+        await self.broadcast("mapas_global", "mapa:updated", {"clave": clave, "mapa": mapa})
 
     async def emit_map_deleted(self, clave: str):
         """Notifica eliminación de un mapa."""
-        await self.broadcast("mapas", "mapa:deleted", {"clave": clave})
+        # Notificar al listado general
+        await self.broadcast("mapas_global", "mapa:deleted", {"clave": clave})
+        # Notificar a los que estaban viéndolo para que salgan
+        await self.broadcast(f"mapa_{clave}", "mapa:deleted", {"clave": clave})
 
 
 # Instancia global del manager

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Tester - Mapas</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; background-color: #f5f5f5;}
+        .card { background: white; border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
+        .log-container { background: #1e1e1e; color: #00ff00; padding: 15px; border-radius: 8px; height: 350px; overflow-y: auto; font-family: monospace; font-size: 14px; white-space: pre-wrap;}
+        .log-entry { margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 8px;}
+        input, button { padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px;}
+        button { background: #2563eb; color: white; border: none; cursor: pointer; font-weight: bold;}
+        button:hover { background: #1d4ed8; }
+        button:disabled { background: #94a3b8; cursor: not-allowed; }
+        .status { display: inline-block; padding: 5px 10px; border-radius: 4px; font-weight: bold; }
+        .status.disconnected { background: #fee2e2; color: #b91c1c; }
+        .status.connected { background: #dcfce3; color: #15803d; }
+    </style>
+</head>
+<body>
+    <h1>🔌 Probador de WebSockets (Mapas)</h1>
+    
+    <div class="card">
+        <h3>1. Conexión</h3>
+        <label for="claveInput">Clave del mapa (deja en blanco para probar el <b>Canal Global</b>):</label><br>
+        <input type="text" id="claveInput" placeholder="Ej: mi-mapa-1" style="width: 300px;">
+        <button id="connectBtn" onclick="connect()">Conectar</button>
+        <button id="disconnectBtn" onclick="disconnect()" disabled>Desconectar</button>
+        <br><br>
+        Estado: <span id="status" class="status disconnected">Desconectado</span>
+    </div>
+
+    <div class="card">
+        <h3>2. Eventos Recibidos en Tiempo Real</h3>
+        <p>Abre el Swagger de la API (o Postman) y crea/edita un mapa para ver los eventos aparecer aquí abajo 👇</p>
+        <div id="logs" class="log-container">Esperando conexión...</div>
+    </div>
+
+    <script>
+        let ws = null;
+
+        function log(message) {
+            const logsDiv = document.getElementById('logs');
+            if (logsDiv.innerHTML === "Esperando conexión...") logsDiv.innerHTML = "";
+            
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            const time = new Date().toLocaleTimeString();
+            entry.textContent = `[${time}] ${message}`;
+            logsDiv.appendChild(entry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        function updateStatus(connected) {
+            const statusEl = document.getElementById('status');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            const claveInput = document.getElementById('claveInput');
+
+            if (connected) {
+                statusEl.textContent = 'Conectado';
+                statusEl.className = 'status connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                claveInput.disabled = true;
+            } else {
+                statusEl.textContent = 'Desconectado';
+                statusEl.className = 'status disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                claveInput.disabled = false;
+            }
+        }
+
+        function connect() {
+            const clave = document.getElementById('claveInput').value.trim();
+            const baseUrl = "ws://localhost:8000/ws/mapas";
+            
+            // Si hay clave, nos conectamos al canal específico, sino al global
+            const wsUrl = clave ? `${baseUrl}/${clave}` : baseUrl;
+
+            log(`Intentando conectar a: ${wsUrl}...`);
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                log(`¡Conectado exitosamente al canal ${clave ? 'ESPECÍFICO ('+clave+')' : 'GLOBAL'}!`);
+                updateStatus(true);
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    log(`📥 Evento: ${data.event}\n📦 Payload: ${JSON.stringify(data.data, null, 2)}`);
+                } catch (e) {
+                    log(`📥 Mensaje crudo: ${event.data}`);
+                }
+            };
+
+            ws.onclose = () => {
+                log('🔌 Desconectado del servidor.');
+                updateStatus(false);
+            };
+
+            ws.onerror = (error) => {
+                log('❌ Error en la conexión WebSocket. Asegúrate de que el backend (localhost:8000) esté corriendo.');
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+            }
+        }
+    </script>
+</body>
+</html>

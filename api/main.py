@@ -15,7 +15,11 @@ app = FastAPI(
     description=(
         "API REST para la gestión y visualización de mapas catastrales urbanos. "
         "Permite crear, leer, actualizar y eliminar mapas catastrales, incluyendo "
-        "la geometría de calles, avenidas, curvas viales y cuadras."
+        "la geometría de calles, avenidas, curvas viales y cuadras.\n\n"
+        "### 🔌 WebSockets (Notificaciones en Tiempo Real)\n"
+        "Los clientes pueden suscribirse para recibir actualizaciones inmediatas.\n"
+        "- **Canal Global (`ws://<host>/ws/mapas`)**: Recibe eventos cuando un mapa es creado, actualizado o eliminado del listado principal.\n"
+        "- **Canal por Mapa (`ws://<host>/ws/mapas/{clave}`)**: Recibe eventos exclusivos cuando el mapa con la `clave` especificada es modificado. Ideal para refrescar el editor interactivo en pantalla."
     ),
     version="1.0.0",
     docs_url="/api/docs",
@@ -38,19 +42,29 @@ app.include_router(router.router)
 
 
 @app.websocket("/ws/mapas")
-async def websocket_endpoint(websocket: WebSocket):
-    """Endpoint WebSocket para notificaciones de mapas en tiempo real."""
-    await manager.connect(websocket, "mapas")
+async def websocket_global(websocket: WebSocket):
+    """Endpoint WebSocket para notificaciones globales del listado de mapas."""
+    await manager.connect(websocket, "mapas_global")
     try:
         while True:
-            # Mantener la conexión viva
-            # El cliente puede enviar mensajes de ping/pong si quiere
-            data = await websocket.receive_text()
-            # Por ahora ignoramos mensajes entrantes (MVP)
+            await websocket.receive_text()
     except Exception:
         pass
     finally:
-        manager.disconnect(websocket, "mapas")
+        manager.disconnect(websocket, "mapas_global")
+
+@app.websocket("/ws/mapas/{clave}")
+async def websocket_mapa(websocket: WebSocket, clave: str):
+    """Endpoint WebSocket exclusivo para actualizaciones de un mapa específico."""
+    channel = f"mapa_{clave}"
+    await manager.connect(websocket, channel)
+    try:
+        while True:
+            await websocket.receive_text()
+    except Exception:
+        pass
+    finally:
+        manager.disconnect(websocket, channel)
 
 
 if __name__ == "__main__":
